@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  alioss-mcp-server:
+    build: .
+    container_name: alioss-mcp-server
+    ports:
+      - "3004:3004"
+    environment:
+      # 基础配置
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3004}
+      
+      # 上传模式配置 (OSS 或 HOOK)
+      - UPLOAD_MODE=${UPLOAD_MODE:-OSS}
+      
+      # HOOK模式配置 (当UPLOAD_MODE=HOOK时必需)
+      - UPLOAD_HOOK_URL=${UPLOAD_HOOK_URL}
+      
+      # OSS模式配置 (当UPLOAD_MODE=OSS时必需)
+      # STS临时凭证配置
+      - STS_ACCESS_KEY_ID=${STS_ACCESS_KEY_ID}
+      - STS_ACCESS_KEY_SECRET=${STS_ACCESS_KEY_SECRET}
+      - STS_ROLE_ARN=${STS_ROLE_ARN}
+      - STS_ENDPOINT=${STS_ENDPOINT:-sts.cn-hangzhou.aliyuncs.com}
+      
+      # OSS存储配置
+      - OSS_ENDPOINT=${OSS_ENDPOINT:-oss-cn-hangzhou.aliyuncs.com}
+      - OSS_BUCKET=${OSS_BUCKET}
+      
+      # CDN配置
+      - CDN_ENDPOINT=${CDN_ENDPOINT}
+    volumes:
+      # 可选：挂载自定义配置文件
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - alioss-network
+    labels:
+      - "com.docker.compose.service=alioss-mcp-server"
+      - "description=阿里云OSS图片转存MCP服务器"
+
+networks:
+  alioss-network:
+    driver: bridge
+    name: alioss-mcp-network
