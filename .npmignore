@@ -68,3 +68,5 @@ yarn.lock
 
 # npm registry files
 .npmrc
+
+PUBLISHING.md

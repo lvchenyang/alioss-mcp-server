@@ -62,7 +62,7 @@ app.use((req, res, next) => {
 let serverInitialized = false;
 const serverInfo = {
     name: 'alioss-mcp-server',
-    version: '1.6.0'
+    version: '1.6.2'
 };
 
 const serverCapabilities = {
