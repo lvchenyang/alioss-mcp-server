@@ -38,6 +38,9 @@ RUN pnpm install --frozen-lockfile --prod
 # 复制构建好的代码
 COPY --from=builder /app/dist ./dist
 
+# 安装wget用于健康检查
+RUN apk add --no-cache wget
+
 # 创建非root用户
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
@@ -51,9 +54,6 @@ EXPOSE 3004
 # 设置环境变量
 ENV NODE_ENV=production
 ENV PORT=3004
-
-# 安装wget用于健康检查
-RUN apk add --no-cache wget
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
