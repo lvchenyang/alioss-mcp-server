@@ -137,7 +137,7 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
   "mcpServers": {
     "alioss-mcp-server": {
       "command": "npx",
-      "args": ["alioss-mcp-server"],
+      "args": ["-y","alioss-mcp-server@latest"],
       "env": {
         "UPLOAD_MODE": "OSS",
         "STS_ACCESS_KEY_ID": "your_sts_access_key_id",
@@ -160,7 +160,7 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
   "mcpServers": {
     "alioss-mcp-server": {
       "command": "npx",
-      "args": ["alioss-mcp-server"],
+      "args": ["-y","alioss-mcp-server@latest"],
       "env": {
         "UPLOAD_MODE": "HOOK",
         "UPLOAD_HOOK_URL": "http://your-api-server:3001/api/resources/transfer-image-to-oss"
