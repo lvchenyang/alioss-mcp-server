@@ -11,9 +11,11 @@
 将指定URL的图片转存到阿里云OSS，并返回新的CDN访问地址。
 
 **参数：**
+
 - `imageURL` (string): 要转存的图片URL地址
 
 **返回结果：**
+
 ```json
 {
   "structuredContent": {
@@ -33,6 +35,7 @@
 ```
 
 **错误返回格式：**
+
 ```json
 {
   "isError": true,
@@ -50,6 +53,7 @@
 ```
 
 **功能特性：**
+
 - 🔄 **双模式支持**: OSS直传和HOOK代理两种模式
 - 🔑 **STS安全**: OSS模式使用STS临时凭证，确保最小权限原则
 - 🌐 支持HTTP/HTTPS协议的图片URL
@@ -98,6 +102,7 @@ CDN_ENDPOINT=https://your-cdn-domain.com
 ```
 
 **OSS模式说明**: 
+
 - 使用STS临时凭证，提供最小权限原则，更加安全
 - 直接通过阿里云OSS SDK上传，性能更好
 - 确保RAM角色具有对应OSS存储桶的PutObject和GetObject权限
@@ -117,6 +122,11 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
 - 无需配置OSS相关参数，由后端API处理
 
 ## MCP客户端集成
+
+本MCP服务器支持两种通信模式：
+
+- **stdio模式**：适用于Cursor等桌面MCP客户端，通过命令行直接启动
+- **HTTP模式**：适用于Docker部署和N8N等服务器环境
 
 ### 配置示例
 
@@ -160,6 +170,13 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
 }
 ```
 
+**🔧 自动模式检测**：
+
+- 服务器会自动检测运行环境
+- Cursor等客户端：自动使用stdio模式（stdin/stdout通信）
+- Docker/手动启动：自动使用HTTP模式（端口3004）
+- 可通过`--stdio`参数或`MCP_TRANSPORT=stdio`环境变量强制指定模式
+
 ## Docker部署
 
 ### 方式一：使用 Docker Compose（推荐）
@@ -167,6 +184,7 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
 1. **创建环境变量文件**
 
 复制配置模板：
+
 ```bash
 cp env.example .env
 ```
@@ -204,6 +222,7 @@ docker-compose down
 ### 方式二：直接使用 Docker
 
 **OSS模式**：
+
 ```bash
 docker build -t alioss-mcp-server .
 
@@ -221,6 +240,7 @@ docker run -d \
 ```
 
 **HOOK模式**：
+
 ```bash
 docker run -d \
   --name alioss-mcp-server \
@@ -291,16 +311,20 @@ pnpm start
 Docker服务启动后，可以在N8N中使用：
 
 #### 前置要求
+
 - 安装 `n8n-nodes-mcp` 社区节点
 - 设置环境变量：`N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true`
 
 #### 配置MCP Client节点
+
 - **Connection Type**: `HTTP Streamable`
 - **HTTP Streamable URL**: `http://localhost:3004/messages`（本地Docker）或 `http://your-server-ip:3004/messages`（远程Docker）
 - **Authentication**: `None`
 
 #### 使用transfer_image_to_oss工具
+
 在N8N工作流中添加MCP Client节点，执行工具时传入：
+
 ```json
 {
   "imageURL": "https://example.com/image.jpg"
@@ -313,7 +337,7 @@ Docker服务启动后，可以在N8N中使用：
 
 ### OSS模式架构
 
-```
+```plaintext
 Claude/Cursor → MCP Server → 阿里云OSS
               (端口3004)     (直接SDK调用)
                   ↓
@@ -322,7 +346,7 @@ Claude/Cursor → MCP Server → 阿里云OSS
 
 ### HOOK模式架构
 
-```
+```plaintext
 Claude/Cursor → MCP Server → API Server → 阿里云OSS
               (端口3004)     (HOOK URL)
 ```
@@ -340,16 +364,19 @@ Claude/Cursor → MCP Server → API Server → 阿里云OSS
 ### 架构优势
 
 **OSS模式**:
+
 - ✅ **安全性高**: STS临时凭证 + 最小权限原则
 - ✅ **性能优异**: 直接SDK调用，减少网络开销
 - ✅ **独立部署**: 无需依赖外部API服务
 
 **HOOK模式**:
+
 - ✅ **兼容性好**: 可集成现有API系统
 - ✅ **灵活部署**: 适应不同的基础设施
 - ✅ **集中管理**: 复用现有的上传逻辑
 
 **通用优势**:
+
 - ✅ **模式切换**: 配置简单，一键切换
 - ✅ **易于维护**: 代码集中，逻辑清晰
 - ✅ **容器友好**: 完整的Docker支持
@@ -359,22 +386,13 @@ Claude/Cursor → MCP Server → API Server → 阿里云OSS
 - **`POST /messages`**: HTTP Streamable MCP端点，支持所有MCP操作
 - **`GET /health`**: 健康检查端点
 
-### 版本历史
-
-- **v1.6.0**: 双模式支持，OSS直传和HOOK代理两种模式，增加Docker Compose配置，生产环境优化
-- **v1.5.0**: 直接OSS SDK集成，使用STS临时凭证，提升安全性和性能
-- **v1.4.0**: 完全符合MCP官方规范，包含structuredContent + content双重支持，规范错误处理
-- **v1.3.0**: 规范化MCP协议，添加outputSchema并使用content格式返回
-- **v1.2.0**: 支持代理模式，复用API接口
-- **v1.1.0**: HTTP Streamable 协议，完全兼容 n8n
-
 ## 使用示例
 
 ### 在 Claude Desktop 中使用
 
 配置完成后，您可以在对话中直接使用：
 
-```
+```plaintext
 请帮我将这个图片转存到OSS：https://example.com/image.jpg
 ```
 
@@ -384,7 +402,7 @@ Claude 会自动调用 MCP 服务将图片上传到阿里云OSS并返回CDN地�
 
 在代码编辑器中，您可以通过AI助手上传图片：
 
-```
+```plaintext
 @alioss-mcp-server 请将这个截图上传到OSS: https://screenshot.example.com/img.png
 ```
 
@@ -426,6 +444,7 @@ curl http://localhost:3004/health
 ```
 
 返回示例：
+
 ```json
 {
   "status": "ok",
@@ -438,6 +457,7 @@ curl http://localhost:3004/health
 ```
 
 **状态说明**：
+
 - `status`: 服务状态 (`ok` 或 `warning`)
 - `service`: 服务名称
 - `initialized`: MCP服务器是否已初始化

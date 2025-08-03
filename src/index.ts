@@ -3,6 +3,7 @@
 import express from 'express';
 import { config } from 'dotenv';
 import { uploadImageToOSS, checkConfiguration } from './upload-to-alioss.js';
+import * as readline from 'readline';
 
 // 加载环境变量
 config();
@@ -62,7 +63,7 @@ app.use((req, res, next) => {
 let serverInitialized = false;
 const serverInfo = {
     name: 'alioss-mcp-server',
-    version: '1.6.2'
+    version: '1.6.3'
 };
 
 const serverCapabilities = {
@@ -274,7 +275,7 @@ async function handleMcpRequest(request: McpRequest): Promise<McpResponse> {
     }
 }
 
-// HTTP Streamable MCP端点 - 主要的消息处理端点
+// HTTP Streamable MCP端点 - 主要的消息处理端点（仅在HTTP模式下使用）
 app.post('/messages', async (req, res) => {
     const isProduction = process.env.NODE_ENV === 'production';
     
@@ -335,9 +336,11 @@ Usage: alioss-mcp-server [options]
 Options:
   -v, --version     Show version number
   -h, --help        Show help information
+  --stdio           Force stdio mode (for MCP clients like Cursor)
   
 Environment Variables:
-  PORT              Server port (default: 3004)
+  PORT              Server port (default: 3004, HTTP mode only)
+  MCP_TRANSPORT     Transport mode: stdio or http (default: auto-detect)
   UPLOAD_MODE       Upload mode: OSS or HOOK (default: OSS)
   
   OSS Mode:
@@ -356,12 +359,78 @@ For more information, visit: https://github.com/yourusername/alioss-mcp-server
     process.exit(0);
 }
 
-// 启动服务器
-const PORT = parseInt(process.env.PORT || '3004');
+// 检测运行模式：stdio (Cursor) 或 http (Docker/N8N)
+const transportMode = process.env.MCP_TRANSPORT || 
+    (args.includes('--stdio') || !process.stdin.isTTY) ? 'stdio' : 'http';
 
-app.listen(PORT, () => {
-    console.log(`🚀 AliOSS MCP Server v${serverInfo.version} listening on port ${PORT}`);
-    console.log(`✅ MCP Endpoint: http://localhost:${PORT}/messages`);
-    console.log(`📋 Health check: http://localhost:${PORT}/health`);
-    console.log(`📖 Protocol: MCP 2024-11-05 (JSON-RPC 2.0 via HTTP Streamable)`);
-}); 
+// stdio模式处理函数
+async function handleStdioRequest(requestJson: string): Promise<void> {
+    try {
+        const request = JSON.parse(requestJson) as McpRequest;
+        const response = await handleMcpRequest(request);
+        
+        // 在stdio模式下，只能通过stdout发送响应
+        console.log(JSON.stringify(response));
+    } catch (error) {
+        // 错误日志发送到stderr，不影响stdout
+        console.error('Error processing stdio request:', error);
+        
+        // 发送错误响应
+        const errorResponse: McpResponse = {
+            jsonrpc: '2.0',
+            id: null,
+            error: {
+                code: -32700,
+                message: 'Parse error',
+                data: error instanceof Error ? error.message : 'Unknown error'
+            }
+        };
+        console.log(JSON.stringify(errorResponse));
+    }
+}
+
+// 启动服务器
+if (transportMode === 'stdio') {
+    // stdio模式：用于Cursor等MCP客户端
+    console.error(`🚀 AliOSS MCP Server v${serverInfo.version} starting in stdio mode`);
+    console.error(`📖 Protocol: MCP 2024-11-05 (JSON-RPC 2.0 via stdio)`);
+    
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        terminal: false
+    });
+    
+    rl.on('line', (line) => {
+        const trimmed = line.trim();
+        if (trimmed) {
+            handleStdioRequest(trimmed);
+        }
+    });
+    
+    rl.on('close', () => {
+        console.error('stdio interface closed');
+        process.exit(0);
+    });
+    
+    // 优雅关闭
+    process.on('SIGINT', () => {
+        console.error('Received SIGINT, shutting down gracefully');
+        rl.close();
+    });
+    
+    process.on('SIGTERM', () => {
+        console.error('Received SIGTERM, shutting down gracefully');
+        rl.close();
+    });
+} else {
+    // HTTP模式：用于Docker部署和N8N集成
+    const PORT = parseInt(process.env.PORT || '3004');
+    
+    app.listen(PORT, () => {
+        console.log(`🚀 AliOSS MCP Server v${serverInfo.version} listening on port ${PORT}`);
+        console.log(`✅ MCP Endpoint: http://localhost:${PORT}/messages`);
+        console.log(`📋 Health check: http://localhost:${PORT}/health`);
+        console.log(`📖 Protocol: MCP 2024-11-05 (JSON-RPC 2.0 via HTTP Streamable)`);
+    });
+} 
