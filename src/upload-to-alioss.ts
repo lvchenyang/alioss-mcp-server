@@ -172,9 +172,7 @@ const uploadImageViaHook = async (imageURL: string): Promise<UploadResult> => {
             throw new Error('UPLOAD_HOOK_URL is required for HOOK mode');
         }
 
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`Uploading via HOOK to: ${hookUrl}`);
-        }
+        // 在stdio模式下，不输出调试信息，避免干扰MCP通信
 
         const version = getProjectVersion();
         const response = await fetch(hookUrl, {
@@ -244,7 +242,7 @@ const uploadImageViaHook = async (imageURL: string): Promise<UploadResult> => {
         }
 
     } catch (error) {
-        console.error('Error uploading image via HOOK:', error);
+        // 在stdio模式下，不输出错误日志到stderr，避免干扰MCP通信
         
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         
@@ -281,9 +279,7 @@ const uploadImageViaOSS = async (imageURL: string): Promise<UploadResult> => {
         });
 
         // 4. 下载图片
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`Downloading image from: ${imageURL}`);
-        }
+        // 在stdio模式下，不输出调试信息，避免干扰MCP通信
         const version = getProjectVersion();
         const response = await fetch(imageURL, {
             signal: AbortSignal.timeout(30000), // 30秒超时
@@ -316,9 +312,7 @@ const uploadImageViaOSS = async (imageURL: string): Promise<UploadResult> => {
         const key = `images/${fileName}`;
 
         // 9. 上传到OSS
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`Uploading to OSS: ${key}`);
-        }
+        // 在stdio模式下，不输出调试信息，避免干扰MCP通信
         const uploadResult = await oss.put(key, buffer, {
             headers: {
                 'Content-Type': contentType,
@@ -329,9 +323,7 @@ const uploadImageViaOSS = async (imageURL: string): Promise<UploadResult> => {
         // 10. 构建返回结果
         const cdnUrl = `${cdnEndpoint}/${uploadResult.name}`;
         
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`Upload successful: ${cdnUrl}`);
-        }
+        // 在stdio模式下，不输出调试信息，避免干扰MCP通信
         
         return {
             success: true,
@@ -345,7 +337,7 @@ const uploadImageViaOSS = async (imageURL: string): Promise<UploadResult> => {
         };
 
     } catch (error) {
-        console.error('Error uploading image to OSS:', error);
+        // 在stdio模式下，不输出错误日志到stderr，避免干扰MCP通信
         
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         
@@ -361,9 +353,7 @@ const uploadImageViaOSS = async (imageURL: string): Promise<UploadResult> => {
 export const uploadImageToOSS = async (imageURL: string): Promise<UploadResult> => {
     const mode = (process.env.UPLOAD_MODE || 'OSS').toUpperCase() as UploadMode;
     
-    if (process.env.NODE_ENV !== 'production') {
-        console.log(`Upload mode: ${mode}`);
-    }
+    // 在stdio模式下，不输出调试信息，避免干扰MCP通信
     
     // 验证输入
     if (!imageURL) {

@@ -63,11 +63,14 @@ app.use((req, res, next) => {
 let serverInitialized = false;
 const serverInfo = {
     name: 'alioss-mcp-server',
-    version: '1.6.5'
+    version: '1.7.3'
 };
 
 const serverCapabilities = {
     tools: {
+        listChanged: true
+    },
+    resources: {
         listChanged: true
     }
 };
@@ -234,20 +237,10 @@ async function handleMcpRequest(request: McpRequest): Promise<McpResponse> {
                         id,
                         error: {
                             code: -32601,
-                            message: `Unknown tool: ${name}`
+                            message: `Method '${name}' not found`
                         }
                     };
                 }
-                
-                // 这一行理论上永远不会执行，但确保所有路径都有return
-                return {
-                    jsonrpc: '2.0',
-                    id,
-                    error: {
-                        code: -32603,
-                        message: 'Unexpected error in tools/call'
-                    }
-                };
             }
 
             default: {
@@ -256,13 +249,12 @@ async function handleMcpRequest(request: McpRequest): Promise<McpResponse> {
                     id,
                     error: {
                         code: -32601,
-                        message: `Unknown method: ${method}`
+                        message: `Method '${method}' not found`
                     }
                 };
             }
         }
     } catch (error) {
-        console.error('Error handling MCP request:', error);
         return {
             jsonrpc: '2.0',
             id,
@@ -370,13 +362,10 @@ async function handleStdioRequest(requestJson: string): Promise<void> {
         const request = JSON.parse(requestJson) as McpRequest;
         const response = await handleMcpRequest(request);
         
-        // 在stdio模式下，只能通过stdout发送响应
-        console.log(JSON.stringify(response));
+        // 在stdio模式下，通过stdout发送响应，确保有换行符
+        process.stdout.write(JSON.stringify(response) + '\n');
     } catch (error) {
-        // 错误日志发送到stderr，不影响stdout
-        console.error('Error processing stdio request:', error);
-        
-        // 发送错误响应
+        // 在stdio模式下，发送错误响应而不是输出到stderr
         const errorResponse: McpResponse = {
             jsonrpc: '2.0',
             id: null,
@@ -386,43 +375,51 @@ async function handleStdioRequest(requestJson: string): Promise<void> {
                 data: error instanceof Error ? error.message : 'Unknown error'
             }
         };
-        console.log(JSON.stringify(errorResponse));
+        process.stdout.write(JSON.stringify(errorResponse) + '\n');
     }
 }
 
 // 启动服务器
 if (transportMode === 'stdio') {
     // stdio模式：用于Cursor等MCP客户端
-    console.error(`🚀 AliOSS MCP Server v${serverInfo.version} starting in stdio mode`);
-    console.error(`📖 Protocol: MCP 2024-11-05 (JSON-RPC 2.0 via stdio)`);
+    // 输出简化的启动信息到stderr，与其他MCP服务器保持一致
+    console.error('AliOSS MCP Server running on stdio');
     
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: false
-    });
+    // 使用更简单的stdin/stdout处理方式
+    let buffer = '';
     
-    rl.on('line', (line) => {
-        const trimmed = line.trim();
-        if (trimmed) {
-            handleStdioRequest(trimmed);
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+        buffer += chunk;
+        
+        // 查找完整的JSON行
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 保留不完整的行
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed) {
+                handleStdioRequest(trimmed);
+            }
         }
     });
     
-    rl.on('close', () => {
-        console.error('stdio interface closed');
+    process.stdin.on('end', () => {
+        // 处理最后可能的不完整行
+        const trimmed = buffer.trim();
+        if (trimmed) {
+            handleStdioRequest(trimmed);
+        }
         process.exit(0);
     });
     
     // 优雅关闭
     process.on('SIGINT', () => {
-        console.error('Received SIGINT, shutting down gracefully');
-        rl.close();
+        process.exit(0);
     });
     
     process.on('SIGTERM', () => {
-        console.error('Received SIGTERM, shutting down gracefully');
-        rl.close();
+        process.exit(0);
     });
 } else {
     // HTTP模式：用于Docker部署和N8N集成
