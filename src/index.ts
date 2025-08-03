@@ -359,23 +359,22 @@ const transportMode = process.env.MCP_TRANSPORT ||
 // stdio模式处理函数
 async function handleStdioRequest(requestJson: string): Promise<void> {
     try {
-        const request = JSON.parse(requestJson) as McpRequest;
+        if (!requestJson.trim()) return; // 忽略空行
+        const request = JSON.parse(requestJson);
+        if (
+            !request ||
+            typeof request !== 'object' ||
+            typeof request.id === 'undefined' ||
+            typeof request.method !== 'string'
+        ) {
+            // 非标准请求，静默
+            return;
+        }
         const response = await handleMcpRequest(request);
-        
-        // 在stdio模式下，通过stdout发送响应，确保有换行符
         process.stdout.write(JSON.stringify(response) + '\n');
     } catch (error) {
-        // 在stdio模式下，发送错误响应而不是输出到stderr
-        const errorResponse: McpResponse = {
-            jsonrpc: '2.0',
-            id: null,
-            error: {
-                code: -32700,
-                message: 'Parse error',
-                data: error instanceof Error ? error.message : 'Unknown error'
-            }
-        };
-        process.stdout.write(JSON.stringify(errorResponse) + '\n');
+        // 解析失败，静默
+        return;
     }
 }
 
