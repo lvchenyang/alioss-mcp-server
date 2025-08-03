@@ -172,10 +172,9 @@ UPLOAD_HOOK_URL=http://your-api-server:3001/api/resources/transfer-image-to-oss
 
 **🔧 自动模式检测**：
 
-- 服务器会自动检测运行环境
-- Cursor等客户端：自动使用stdio模式（stdin/stdout通信）
-- Docker/手动启动：自动使用HTTP模式（端口3004）
-- 可通过`--stdio`参数或`MCP_TRANSPORT=stdio`环境变量强制指定模式
+- **默认使用stdio模式**，适合所有MCP客户端（Cursor、Claude Desktop等）
+- 当设置`PORT`环境变量或使用`--http`参数时，自动切换到HTTP模式（适合Docker部署）
+- 可通过`MCP_TRANSPORT=http`环境变量强制指定HTTP模式
 
 ## Docker部署
 

@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 let serverInitialized = false;
 const serverInfo = {
     name: 'alioss-mcp-server',
-    version: '1.6.3'
+    version: '1.6.5'
 };
 
 const serverCapabilities = {
@@ -336,7 +336,7 @@ Usage: alioss-mcp-server [options]
 Options:
   -v, --version     Show version number
   -h, --help        Show help information
-  --stdio           Force stdio mode (for MCP clients like Cursor)
+  --http            Force HTTP mode (for Docker/N8N deployment)
   
 Environment Variables:
   PORT              Server port (default: 3004, HTTP mode only)
@@ -360,8 +360,9 @@ For more information, visit: https://github.com/yourusername/alioss-mcp-server
 }
 
 // 检测运行模式：stdio (Cursor) 或 http (Docker/N8N)
+// 默认使用stdio模式，除非明确指定HTTP模式
 const transportMode = process.env.MCP_TRANSPORT || 
-    (args.includes('--stdio') || !process.stdin.isTTY) ? 'stdio' : 'http';
+    (process.env.PORT || args.includes('--http')) ? 'http' : 'stdio';
 
 // stdio模式处理函数
 async function handleStdioRequest(requestJson: string): Promise<void> {
