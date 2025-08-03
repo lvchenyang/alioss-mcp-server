@@ -382,8 +382,7 @@ async function handleStdioRequest(requestJson: string): Promise<void> {
 // 启动服务器
 if (transportMode === 'stdio') {
     // stdio模式：用于Cursor等MCP客户端
-    // 输出简化的启动信息到stderr，与其他MCP服务器保持一致
-    console.error('AliOSS MCP Server running on stdio');
+    // 完全静默模式，不输出任何信息到stderr或stdout
     
     // 使用更简单的stdin/stdout处理方式
     let buffer = '';
